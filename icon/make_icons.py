@@ -45,9 +45,9 @@ SVG = '''<?xml version="1.0" encoding="UTF-8"?>
   <!-- numbers: 7 + 9 -->
   <g font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-weight="bold"
      text-anchor="middle" dominant-baseline="alphabetic">
-    <text x="280" y="700" font-size="520" fill="url(#redgloss)">7</text>
+    <text x="280" y="700" font-size="520" fill="url(#redgloss)">6</text>
     <text x="512" y="678" font-size="360" fill="url(#darkgloss)">+</text>
-    <text x="752" y="700" font-size="520" fill="url(#redgloss)">9</text>
+    <text x="752" y="700" font-size="520" fill="url(#redgloss)">7</text>
   </g>
 
   <!-- glossy sheen across the top, with a gentle curved lower edge -->

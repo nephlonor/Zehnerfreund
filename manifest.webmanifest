@@ -1,0 +1,17 @@
+{
+  "name": "Zehnerfreund",
+  "short_name": "Zehnerfreund",
+  "description": "Anschaulicher Rechner für Kinder – Plus, Minus, Mal und Geteilt mit Zehnerfeldern.",
+  "lang": "de",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f3ef",
+  "theme_color": "#f4f3ef",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

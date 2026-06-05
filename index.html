@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f4f3ef">
+<meta name="apple-mobile-web-app-title" content="Zehnerfreund">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Zehnerfreund</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root{
+    --bg:#f4f3ef;
+    --ink:#111111;
+    --paper:#ffffff;
+    --accent:#e3000f;
+    --grid:#d8d6cf;
+    --muted:#8a8881;
+    --left:#111111;
+    --right:#e3000f;
+    --gap:#ffffff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-weight:400;
+    display:flex;
+    justify-content:center;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    width:100%;
+    max-width:480px;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    padding:22px 26px 14px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    border-bottom:2px solid var(--ink);
+    margin:0 0 0;
+    background:var(--paper);
+  }
+  header .title{
+    font-size:19px;
+    font-weight:700;
+    letter-spacing:-0.5px;
+    text-transform:uppercase;
+  }
+  header .dot{
+    width:13px;height:13px;border-radius:50%;
+    background:var(--accent);
+    display:inline-block;
+    margin-left:2px;
+  }
+  header .sub{
+    font-size:11px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+
+  /* ---------- DISPLAY ---------- */
+  .display{
+    padding:18px 26px 10px;
+    display:flex;
+    align-items:baseline;
+    justify-content:flex-end;
+    gap:6px;
+    min-height:74px;
+    background:var(--paper);
+  }
+  .expr{
+    font-size:40px;
+    font-weight:300;
+    letter-spacing:-1px;
+    line-height:1;
+    word-break:break-all;
+    text-align:right;
+  }
+  .expr .op{color:var(--accent);font-weight:400;padding:0 2px;}
+  .result{
+    font-size:40px;
+    font-weight:700;
+    letter-spacing:-1px;
+    color:var(--accent);
+    line-height:1;
+  }
+  .result.hidden{display:none;}
+
+  /* ---------- VISUAL FIELD ---------- */
+  .field{
+    flex:1;
+    margin:4px 26px 8px;
+    background:var(--paper);
+    border:2px solid var(--ink);
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  .frames{
+    display:flex;
+    gap:26px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  }
+  /* a 2x5 ten-frame */
+  .frame{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    grid-template-rows:repeat(2,1fr);
+    gap:5px;
+    padding:7px;
+    border:1.5px solid var(--ink);
+    background:var(--bg);
+  }
+  .cell{
+    width:24px;height:24px;
+    border-radius:50%;
+    border:1.5px solid var(--grid);
+    background:transparent;
+    transition:background .75s ease, border-color .75s ease, transform .6s ease;
+  }
+  .cell.on-left{background:var(--left);border-color:var(--left);}
+  .cell.on-right{background:var(--right);border-color:var(--right);}
+  .cell.pop{transform:scale(1.35);}
+
+  /* half dot for decimals (kids: "a half") */
+  .cell.half{
+    background:transparent;
+    border-color:var(--left);
+    overflow:hidden;
+    position:relative;
+  }
+  .cell.half::before{
+    content:"";
+    position:absolute;
+    top:0;left:0;bottom:0;
+    width:50%;
+    background:var(--left);
+  }
+  .cell.half.right-half::before{background:var(--right);border-color:var(--right);}
+  .cell.half.right-half{border-color:var(--right);}
+
+  /* subtraction: dot being taken away */
+  .cell.leaving{
+    animation:leave 1.2s ease forwards;
+  }
+  @keyframes leave{
+    0%{transform:scale(1);opacity:1;}
+    35%{transform:scale(1.35);opacity:1;}
+    100%{transform:scale(0);opacity:0;}
+  }
+  /* the empty spot left behind after a dot is subtracted: dashed outline */
+  .cell.removed{
+    background:transparent!important;
+    border:2px dashed var(--right)!important;
+    opacity:.7;
+  }
+  /* a small caption under a frame ("bleibt" / "weg") */
+  .framecap{
+    text-align:center;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-top:6px;
+  }
+  .framecol{display:flex;flex-direction:column;align-items:center;}
+
+  /* multiplication: each group jiggles in turn */
+  .grp{
+    display:flex;
+    gap:4px;
+    padding:6px;
+    border:1.5px solid transparent;
+    border-radius:10px;
+    transition:border-color .3s ease, background .3s ease;
+  }
+  .grp.jiggle{
+    animation:jiggle 1.1s cubic-bezier(.4,0,.2,1);
+    border-color:var(--accent);
+    background:rgba(227,0,15,0.06);
+  }
+  @keyframes jiggle{
+    0%,100%{transform:translateY(0) scale(1);}
+    30%{transform:translateY(-7px) scale(1.06);}
+    65%{transform:translateY(0) scale(1.03);}
+  }
+  .grp .gdot{
+    width:18px;height:18px;border-radius:50%;
+    background:var(--left);
+    flex:0 0 auto;
+  }
+  .grp .gdot:not(.deal){
+    animation:dotpop .5s cubic-bezier(.34,1.5,.64,1) both;
+  }
+  @keyframes dotpop{
+    0%{transform:scale(0);}
+    100%{transform:scale(1);}
+  }
+  .grp.done .gdot{background:var(--accent);}
+  .grpwrap{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    max-width:100%;
+  }
+
+  /* ---- division as pie pieces (real SVG sectors) ---- */
+  .pies{
+    display:flex;
+    gap:20px;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    max-width:100%;
+    padding:6px;
+  }
+  .pie{
+    flex:0 0 auto;
+  }
+  .pie svg{display:block;}
+  .pie .sector{
+    fill:var(--bg);
+    stroke:var(--ink);
+    stroke-width:1.5;
+    stroke-linejoin:round;
+    transition:fill .8s cubic-bezier(.4,0,.2,1);
+  }
+  .pielabel{
+    text-align:center;
+    font-size:11px;
+    letter-spacing:1px;
+    color:var(--muted);
+    margin-top:6px;
+    text-transform:uppercase;
+  }
+  .pielegend{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-top:10px;
+  }
+  .pilleg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink);}
+  .pilleg .sw{width:12px;height:12px;border-radius:3px;border:1px solid var(--ink);}
+
+  /* explanatory message panel for non-visual calculations */
+  .explain{
+    max-width:300px;
+    text-align:center;
+    padding:0 20px;
+  }
+  .explain .big{
+    font-size:34px;
+    font-weight:300;
+    letter-spacing:-1px;
+    margin-bottom:14px;
+    color:var(--ink);
+  }
+  .explain .big b{color:var(--accent);font-weight:600;}
+  .explain .txt{
+    font-size:14px;
+    line-height:1.55;
+    color:var(--muted);
+  }
+
+  .hint{
+    position:absolute;
+    bottom:10px;left:0;right:0;
+    text-align:center;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .empty{
+    color:var(--muted);
+    font-size:13px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    text-align:center;
+    line-height:1.8;
+  }
+
+  /* flying dot: filled with NEW colour, ringed in its OLD colour */
+  .flyer{
+    position:absolute;
+    width:24px;height:24px;border-radius:50%;
+    background:var(--right);
+    box-sizing:border-box;
+    border:3px solid var(--left);
+    z-index:30;
+    pointer-events:none;
+    transition:transform 1.1s cubic-bezier(.45,0,.15,1);
+  }
+  /* a landed cell that still shows its origin colour as a ring */
+  .cell.ringed-left{border-color:var(--left)!important;border-width:3px!important;}
+  .cell.ringed-right{border-color:var(--right)!important;border-width:3px!important;}
+
+  /* a dot tidily settling back into its ten-frame cell */
+  .cell.settling{transition:background .6s ease, border-color .6s ease, transform .6s ease;}
+
+  /* the visual field is tappable once a result is shown */
+  .field.tappable{cursor:pointer;}
+
+  /* ---------- KEYPAD ---------- */
+  .pad{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    grid-template-areas:
+      "clr  bsp  mul  div"
+      "n7   n8   n9   minus"
+      "n4   n5   n6   minus"
+      "n1   n2   n3   plus"
+      "n0   dot  eq   plus";
+    gap:2px;
+    background:var(--ink);
+    border-top:2px solid var(--ink);
+  }
+  button.key{
+    border:none;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:inherit;
+    font-size:25px;
+    font-weight:400;
+    padding:18px 0;
+    cursor:pointer;
+    transition:background .08s;
+    user-select:none;
+  }
+  button.key:active{background:var(--bg);}
+  button.key.op{color:var(--accent);font-weight:500;}
+  button.key.act{background:var(--ink);color:#fff;font-size:15px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
+  button.key.act:active{background:#333;}
+  button.key.eq{background:var(--accent);color:#fff;font-weight:700;}
+  button.key.eq:active{background:#b3000c;}
+  /* bigger, prominent + and − spanning two rows */
+  button.key.op.big{
+    font-size:40px;
+    font-weight:600;
+    background:#f4efe6;
+  }
+  button.key.op.big:active{background:#e8e0d2;}
+  button.key.op.big.minus{grid-area:minus;}
+  button.key.op.big.plus{grid-area:plus;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <span class="title">Zehnerfreund<span class="dot"></span></span>
+    </div>
+    <span class="sub"></span>
+  </header>
+
+  <div class="display">
+    <div class="expr" id="expr">0</div>
+    <div class="result hidden" id="result"></div>
+  </div>
+
+  <div class="field" id="field">
+    <div class="empty" id="empty">Gib eine Rechnung ein<br>z.&nbsp;B. 4 + 9</div>
+    <div class="frames" id="frames" style="display:none;"></div>
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <div class="pad">
+    <button class="key act" data-act="clear" style="grid-area:clr">C</button>
+    <button class="key act" data-act="back" style="grid-area:bsp">⌫</button>
+    <button class="key op" data-op="×" style="grid-area:mul">×</button>
+    <button class="key op" data-op="÷" style="grid-area:div">÷</button>
+
+    <button class="key" data-num="7" style="grid-area:n7">7</button>
+    <button class="key" data-num="8" style="grid-area:n8">8</button>
+    <button class="key" data-num="9" style="grid-area:n9">9</button>
+    <button class="key op big minus" data-op="−">−</button>
+
+    <button class="key" data-num="4" style="grid-area:n4">4</button>
+    <button class="key" data-num="5" style="grid-area:n5">5</button>
+    <button class="key" data-num="6" style="grid-area:n6">6</button>
+
+    <button class="key" data-num="1" style="grid-area:n1">1</button>
+    <button class="key" data-num="2" style="grid-area:n2">2</button>
+    <button class="key" data-num="3" style="grid-area:n3">3</button>
+    <button class="key op big plus" data-op="+">+</button>
+
+    <button class="key" data-num="0" style="grid-area:n0">0</button>
+    <button class="key" data-num="." style="grid-area:dot">,</button>
+    <button class="key eq" data-act="equals" style="grid-area:eq">=</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const exprEl   = document.getElementById('expr');
+  const resultEl = document.getElementById('result');
+  const framesEl = document.getElementById('frames');
+  const emptyEl  = document.getElementById('empty');
+  const hintEl   = document.getElementById('hint');
+  const field    = document.getElementById('field');
+
+  // ---------------- state ----------------
+  let expr = "";
+  let justEvaluated = false;
+  let lastCalc = null;     // {a, op, b, total}
+  let viewIndex = 0;       // which alternative rendering is showing
+  let animating = false;   // lock taps / new runs during an animation
+  let timers = [];         // pending timeouts, cleared on reset
+
+  const OPS = {'+':'+','−':'-','×':'*','÷':'/'};
+
+  // a calm, single source of truth for pacing
+  const T = {
+    step:   650,   // gap between discrete events (a dot, a slice, a group)
+    fly:   1100,   // travel time of a moving dot
+    settle: 700,   // small settle/pop
+    pause:  900    // breathing room before/after a phase
+  };
+
+  // managed setTimeout so we can cancel everything on reset
+  function after(ms, fn){ const id=setTimeout(fn,ms); timers.push(id); return id; }
+  function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+
+  // ---------------- number formatting (kid friendly) ----------------
+  function fmt(n){
+    if(Object.is(n,-0)) n=0;
+    if(Number.isInteger(n)) return String(n);
+    let s=(Math.round(n*1000)/1000).toString();
+    return s.replace('.', ',');
+  }
+  function isHalfInteger(n){ return Math.abs(n*2-Math.round(n*2))<1e-9; }
+
+  // ---------------- display ----------------
+  function render(){
+    if(expr === ""){ exprEl.textContent="0"; return; }
+    let disp = expr.replace(/\./g, ',');
+    exprEl.innerHTML = disp.replace(/[+\−×÷]/g, m=>'<span class="op">'+m+'</span>');
+  }
+
+  function press(ch){
+    // after "=", a digit starts fresh; an operator continues from the result
+    if(justEvaluated){
+      if("+−×÷".includes(ch)){
+        const r = resultEl.textContent.replace(/[^\d.,\-]/g,'').replace(',', '.');
+        softReset();
+        expr = (r!=="" && r!=="-" ? r : "");
+      } else {
+        clearAll();
+      }
+      justEvaluated = false;
+    }
+    resultEl.classList.add('hidden');
+    if("+−×÷".includes(ch)){
+      if(expr === "") return;                       // no leading operator
+      if("+−×÷".includes(expr.slice(-1))){          // replace a trailing operator
+        expr = expr.slice(0,-1)+ch; render(); return;
+      }
+    }
+    if(ch==="."){
+      const seg = expr.split(/[+\−×÷]/).pop();
+      if(seg.includes(".")) return;                 // one decimal per number
+      if(seg===""){ expr += "0."; render(); return; }
+    }
+    expr += ch;
+    render();
+  }
+
+  function clearFloaters(){
+    field.querySelectorAll('.flyer, .gdot').forEach(el=>el.remove());
+  }
+  function softReset(){
+    clearTimers();
+    clearFloaters();
+    animating=false;
+    framesEl.style.display='none';
+    framesEl.innerHTML='';
+    emptyEl.style.display='block';
+    hintEl.textContent='';
+    field.classList.remove('tappable');
+    lastCalc=null; viewIndex=0;
+  }
+  function clearAll(){
+    expr=""; render();
+    justEvaluated=false;
+    resultEl.classList.add('hidden');
+    softReset();
+  }
+  function back(){
+    if(justEvaluated){ clearAll(); return; }
+    expr=expr.slice(0,-1); render();
+    resultEl.classList.add('hidden');
+  }
+
+  // ---------------- ten-frame building blocks ----------------
+  function buildFrame(){
+    const f=document.createElement('div');
+    f.className='frame';
+    for(let i=0;i<10;i++){
+      const c=document.createElement('div');
+      c.className='cell';
+      f.appendChild(c);
+    }
+    return f;
+  }
+  // a row of ten-frames holding `n` dots (supports trailing .5 as a half dot)
+  function buildGroup(n, cls){
+    const wrap=document.createElement('div');
+    wrap.style.display='flex';
+    wrap.style.gap='14px';
+    wrap.style.flexWrap='wrap';
+    wrap.style.justifyContent='center';
+    const whole=Math.floor(n+1e-9);
+    const hasHalf=(n-whole)>=0.5-1e-9;
+    const totalCells=whole+(hasHalf?1:0);
+    const frameCount=Math.max(1,Math.ceil(totalCells/10));
+    let placed=0; const cells=[];
+    for(let fi=0;fi<frameCount;fi++){
+      const f=buildFrame();
+      wrap.appendChild(f);
+      [...f.children].forEach(cell=>{
+        if(placed<whole){ cell.classList.add(cls); placed++; }
+        else if(placed===whole && hasHalf){
+          cell.classList.add('half');
+          if(cls==='on-right') cell.classList.add('right-half');
+          placed++;
+        }
+        cells.push(cell);
+      });
+    }
+    return {wrap, cells};
+  }
+
+  function prepField(){
+    clearTimers();
+    clearFloaters();
+    emptyEl.style.display='none';
+    framesEl.style.display='flex';
+    framesEl.innerHTML='';
+    field.classList.remove('tappable');
+  }
+
+  // ---------------- finish helper ----------------
+  // Fly a single dot from a start RECT to a target RECT using a temporary flyer
+  // that animates with transform (smooth, no reflow jump). On arrival the target
+  // cell is filled. `colorStart`/`colorEnd` let the dot recolour mid-flight.
+  function flyRect(startRect, targetRect, opts, done){
+    opts=opts||{};
+    const fr=field.getBoundingClientRect();
+    const flyer=document.createElement('div');
+    flyer.className='flyer';
+    flyer.style.width=(startRect.width)+'px';
+    flyer.style.height=(startRect.height)+'px';
+    flyer.style.background=opts.colorStart||'var(--left)';
+    flyer.style.borderColor=opts.ringStart||opts.colorStart||'var(--left)';
+    flyer.style.left=(startRect.left-fr.left)+'px';
+    flyer.style.top=(startRect.top-fr.top)+'px';
+    flyer.style.transition='none';
+    field.appendChild(flyer);
+    const dx=targetRect.left-startRect.left;
+    const dy=targetRect.top-startRect.top;
+    const sx=targetRect.width/startRect.width;
+    const sy=targetRect.height/startRect.height;
+    // two-frame commit: first frame paints the start state, second frame animates
+    requestAnimationFrame(()=>{
+      flyer.style.transition='transform '+(opts.glide||950)+'ms cubic-bezier(.45,0,.15,1), background .5s ease, border-color .5s ease';
+      requestAnimationFrame(()=>{
+        flyer.style.transform=`translate(${dx}px,${dy}px) scale(${sx},${sy})`;
+        if(opts.colorEnd) flyer.style.background=opts.colorEnd;
+        if(opts.ringEnd!==undefined) flyer.style.borderColor=opts.ringEnd;
+      });
+    });
+    after((opts.glide||950)+60, ()=>{ flyer.remove(); if(done) done(); });
+    return flyer;
+  }
+
+  function endCalc(total, hint){
+    if(hint!==undefined) hintEl.textContent=hint;
+    resultEl.textContent='= '+fmt(total);
+    resultEl.classList.remove('hidden');
+    animating=false;
+    if(lastCalc) field.classList.add('tappable');
+  }
+
+  // explanatory panel for things that don't visualise as dots
+  function explain(total, bigHtml, txt){
+    prepField();
+    const box=document.createElement('div');
+    box.className='explain';
+    const big=document.createElement('div'); big.className='big'; big.innerHTML=bigHtml;
+    const t=document.createElement('div'); t.className='txt'; t.textContent=txt;
+    box.appendChild(big); box.appendChild(t);
+    framesEl.appendChild(box);
+    hintEl.textContent='';
+    endCalc(total);
+  }
+
+  // ================= ADDITION =================
+  // General "make the next ten" model that works for ANY a + b.
+  // Show a on the left, b on the right, then move dots from the right
+  // to top up the left frames to full tens, one ten at a time.
+  function showAddition(a,b){
+    prepField();
+    const total=a+b;
+    // only whole-number addition gets the make-ten movement
+    if(!Number.isInteger(a) || !Number.isInteger(b)){
+      return explain(total, fmt(a)+' + '+fmt(b)+' = <b>'+fmt(total)+'</b>',
+        'Wir legen '+fmt(a)+' und '+fmt(b)+' zusammen.');
+    }
+    if(total>40){
+      return explain(total, fmt(a)+' + '+fmt(b)+' = <b>'+fmt(total)+'</b>',
+        'Das sind viele Punkte – stell dir '+fmt(a)+' und dann noch '+fmt(b)+' dazu vor.');
+    }
+
+    // Decide who stays (base) and who donates: move the FEWER "ones".
+    // Tens stay as full frames; only the ones of the two numbers combine.
+    const onesA=a%10, onesB=b%10;
+    // base keeps the larger ones-pile; donor gives its (smaller) ones
+    let baseN, donorN;
+    if(onesA>=onesB){ baseN=a; donorN=b; }
+    else            { baseN=b; donorN=a; }
+
+    const base=buildGroup(baseN, 'on-left');
+    const donor=buildGroup(donorN, 'on-right');
+    framesEl.appendChild(base.wrap);
+    framesEl.appendChild(donor.wrap);
+    hintEl.textContent=fmt(a)+' + '+fmt(b)+' = ?';
+
+    const baseCells=base.cells;
+    const donorOnesCount = donorN%10;            // only the ones move
+    const donorFilled=()=>donor.cells.filter(c=>c.classList.contains('on-right'));
+
+    after(T.pause, ()=>moveOnes());
+
+    // move exactly the donor's ones onto the base, into its empty cells —
+    // smoothly, in chunks of 5, via the shared chain mover
+    function moveOnes(){
+      const donors=donorFilled();
+      const empties=baseCells.filter(c=>!c.classList.contains('on-left'));
+      const moveCount=Math.min(donorOnesCount, donors.length, empties.length);
+      if(moveCount<=0){ finishAdd(); return; }
+      // donors taken from the end (the loose ones); collect rects + clear origins
+      const startRects=[], targetRects=[], destCells=[];
+      for(let k=0;k<moveCount;k++){
+        const from=donors[donors.length-1-k];
+        const to=empties[k];
+        startRects.push(from.getBoundingClientRect());
+        targetRects.push(to.getBoundingClientRect());
+        destCells.push(to);
+        from.classList.remove('on-right'); // origin emptied; flyer carries it
+      }
+      runChainMove(moveCount, startRects, targetRects, {
+        glide:900, within:100, gapAfter:140,
+        colorStart:'var(--right)', colorEnd:'var(--left)',
+        ringStart:'var(--right)', ringEnd:'var(--right)',
+        onLand:(i)=>{ destCells[i].classList.add('on-left','ringed-right','settling'); },
+        onDone:finishAdd
+      });
+    }
+
+    function finishAdd(){
+      const tens=Math.floor(total/10);
+      const rest=total-tens*10;
+      let hint;
+      if(tens>=1 && rest>0) hint=tens+'×10 + '+rest+' = '+fmt(total);
+      else if(tens>=1)      hint=tens+'×10 = '+fmt(total);
+      else                  hint=fmt(a)+' + '+fmt(b)+' = '+fmt(total);
+      after(T.settle, ()=>endCalc(total, hint));
+    }
+  }
+
+  // ================= SUBTRACTION =================
+  // Show `a` on the left ("bleibt"). The dots being taken away FLY to a second
+  // ten-frame on the right ("weg"), each leaving a dashed outline where it was.
+  function showSubtraction(a,b){
+    prepField();
+    const total=a-b;
+    if(total<0){
+      return explain(total, fmt(a)+' − '+fmt(b)+' = <b>'+fmt(total)+'</b>',
+        'Wir nehmen mehr weg als da ist – das Ergebnis wird kleiner als null (eine Minuszahl).');
+    }
+    if(a>20 || (!Number.isInteger(a)&&!isHalfInteger(a)) || (!Number.isInteger(b)&&!isHalfInteger(b))){
+      return explain(total, fmt(a)+' − '+fmt(b)+' = <b>'+fmt(total)+'</b>',
+        'Von '+fmt(a)+' nehmen wir '+fmt(b)+' weg.');
+    }
+
+    // left column: the starting amount, captioned "bleibt"
+    const srcCol=document.createElement('div'); srcCol.className='framecol';
+    const grp=buildGroup(a,'on-left');
+    srcCol.appendChild(grp.wrap);
+    const srcCap=document.createElement('div'); srcCap.className='framecap';
+    srcCap.textContent='bleibt';
+    srcCol.appendChild(srcCap);
+
+    // right column: the empty "weg" frame that will receive the taken-away dots
+    const awayCol=document.createElement('div'); awayCol.className='framecol';
+    const wholeB=Math.floor(b+1e-9);
+    const halfB=(b-wholeB)>=0.5-1e-9;
+    const away=buildGroup(Math.max(1,wholeB+(halfB?1:0)),'tmp'); // build cells, then clear
+    away.cells.forEach(c=>c.classList.remove('tmp'));           // all empty to start
+    awayCol.appendChild(away.wrap);
+    const awayCap=document.createElement('div'); awayCap.className='framecap';
+    awayCap.textContent='weg';
+    awayCol.appendChild(awayCap);
+
+    framesEl.appendChild(srcCol);
+    framesEl.appendChild(awayCol);
+    hintEl.textContent=fmt(a)+' − '+fmt(b)+' = ?';
+
+    const filled=grp.cells.filter(c=>c.classList.contains('on-left')||c.classList.contains('half'));
+    const takeWhole=Math.min(wholeB,filled.length);
+    const awayCells=away.cells;
+
+    // collect every dot to remove (whole ones + an optional trailing half),
+    // record start/target rects, leave dashed outlines behind, then chain-move.
+    after(T.pause, ()=>{
+      const moves=[];           // {startRect, targetRect, toCell, isHalf}
+      let ti=0;
+      for(let k=0;k<takeWhole;k++){
+        const from=filled[filled.length-1-k];
+        const to=awayCells[ti++];
+        if(!from||!to) break;
+        moves.push({from, to, isHalf:false});
+      }
+      if(halfB && filled[filled.length-1-takeWhole] && awayCells[ti]){
+        moves.push({from:filled[filled.length-1-takeWhole], to:awayCells[ti++], isHalf:true});
+      }
+      if(moves.length===0){ endCalc(total, fmt(a)+' − '+fmt(b)+' = '+fmt(total)); return; }
+
+      const startRects=[], targetRects=[];
+      moves.forEach(mv=>{
+        startRects.push(mv.from.getBoundingClientRect());
+        targetRects.push(mv.to.getBoundingClientRect());
+        // leave a dashed outline where the dot was
+        mv.from.classList.remove('on-left','half','right-half','ringed-left','ringed-right');
+        mv.from.classList.add('removed');
+      });
+
+      runChainMove(moves.length, startRects, targetRects, {
+        glide:900, within:100, gapAfter:140,
+        colorStart:'var(--left)', colorEnd:'var(--right)',
+        ringStart:'var(--left)', ringEnd:'var(--right)',
+        onLand:(i)=>{
+          const mv=moves[i];
+          mv.to.classList.add(mv.isHalf?'half':'on-right','settling');
+          if(mv.isHalf) mv.to.classList.add('right-half');
+        },
+        onDone:()=>endCalc(total, fmt(a)+' − '+fmt(b)+' = '+fmt(total))
+      });
+    });
+  }
+
+  // ================= MULTIPLICATION =================
+  // The SMALLER factor is the number of groups, the LARGER is the size of each
+  // group ("the smaller number fills up the larger"). Tapping flips this.
+  function showMultiplication(a,b,orientation){
+    prepField();
+    const total=a*b;
+    if(a===0 || b===0){
+      return explain(0, fmt(a)+' × '+fmt(b)+' = <b>0</b>',
+        'Mal null ist immer null – es gibt keine einzige Gruppe.');
+    }
+    if(!Number.isInteger(a)||!Number.isInteger(b)){
+      return explain(total, fmt(a)+' × '+fmt(b)+' = <b>'+fmt(total)+'</b>',
+        fmt(a)+' mal die Menge '+fmt(b)+' genommen.');
+    }
+    const small=Math.min(a,b), large=Math.max(a,b);
+    // orientation 0 (default): few large groups; orientation 1: many small groups
+    const groupCount = orientation ? large : small;
+    const perGroup   = orientation ? small : large;
+    if(total>40 || groupCount>10){
+      return explain(total, fmt(a)+' × '+fmt(b)+' = <b>'+fmt(total)+'</b>',
+        groupCount+' Gruppen mit je '+perGroup+' Punkten.');
+    }
+
+    const wrap=document.createElement('div');
+    wrap.className='grpwrap';
+    framesEl.appendChild(wrap);
+
+    const groupDots=[];   // array of arrays: dots per group, in order
+    let g=0, running=0;
+    function step(){
+      if(g>=groupCount){
+        after(T.pause, ()=>settleIntoFrames(groupDots, total,
+          groupCount+' × '+perGroup+' = '+fmt(total)));
+        return;
+      }
+      const grp=document.createElement('div');
+      grp.className='grp';
+      const thisGroup=[];
+      for(let d=0; d<perGroup; d++){
+        const dot=document.createElement('div'); dot.className='gdot';
+        grp.appendChild(dot); thisGroup.push(dot);
+      }
+      groupDots.push(thisGroup);
+      wrap.appendChild(grp);
+      grp.classList.add('jiggle');
+      running+=perGroup;
+      hintEl.textContent=(g+1)+' × '+perGroup+' = '+running;
+      after(T.step+450, ()=>{
+        grp.classList.remove('jiggle');
+        grp.classList.add('done');
+        g++; step();
+      });
+    }
+    after(T.pause, step);
+  }
+
+  // Glide the grouped dots into a fresh ten-frame using temporary flyers.
+  // Movement runs in CHUNKS OF 5: inside a chunk dots launch 100ms apart and do
+  // NOT wait for each other; after 5 dots we wait until they've landed, then go on.
+  function settleIntoFrames(groupDots, total, label){
+    const n=groupDots.reduce((s,g)=>s+g.length,0);
+
+    // flat list of all dots in group order; record their current positions
+    const flat=[];
+    groupDots.forEach(g=>g.forEach(d=>flat.push(d)));
+    const startRects=flat.map(d=>d.getBoundingClientRect());
+    // hide the originals immediately (the flyers carry the motion)
+    flat.forEach(d=>{ d.style.visibility='hidden'; });
+
+    // remove the empty group boxes from flow so the dest frame is final & stable
+    const gw=framesEl.querySelector('.grpwrap');
+    if(gw) gw.style.display='none';
+
+    // build the destination ten-frame
+    const dest=buildGroup(n,'on-left');
+    framesEl.appendChild(dest.wrap);
+    const targets=dest.cells.filter(c=>c.classList.contains('on-left'));
+    const targetRects=targets.map(t=>t.getBoundingClientRect());
+    targets.forEach(t=>t.classList.remove('on-left')); // reveal as dots land
+
+    runChainMove(flat.length, startRects, targetRects, {
+      glide:950, within:100, gapAfter:140,
+      colorStart:'var(--left)', colorEnd:'var(--left)',
+      onLand:(i)=>{ if(targets[i]) targets[i].classList.add('on-left'); },
+      onDone:()=>{ targets.forEach(t=>t.classList.add('on-left'));
+                   flat.forEach(d=>d.remove());
+                   if(gw) gw.remove();
+                   endCalc(total, label); }
+    });
+  }
+
+  // Shared 5-at-a-time chain mover. Calls flyRect for each index; reveals cells
+  // via onLand(index) as each dot arrives; onDone() when all have landed.
+  function runChainMove(count, startRects, targetRects, opts){
+    const CHUNK=5;
+    let start=0;
+    function chunk(){
+      if(start>=count){ after((opts.glide||950)+120, ()=>opts.onDone&&opts.onDone()); return; }
+      const end=Math.min(start+CHUNK, count);
+      const c=end-start, base=start;
+      for(let k=0;k<c;k++){
+        const i=base+k;
+        const sr=startRects[i], tr=targetRects[i];
+        if(!sr||!tr) continue;
+        after(k*(opts.within||100), ()=>{
+          flyRect(sr, tr, {
+            glide:opts.glide||950,
+            colorStart:opts.colorStart, colorEnd:opts.colorEnd,
+            ringStart:opts.ringStart, ringEnd:opts.ringEnd
+          }, ()=>{ if(opts.onLand) opts.onLand(i); });
+        });
+      }
+      const chunkDuration=(c-1)*(opts.within||100)+(opts.glide||950);
+      start=end;
+      after(chunkDuration+(opts.gapAfter||140), chunk);
+    }
+    after(180, chunk);
+  }
+
+  // ================= DIVISION (dots) =================
+  function showDivisionDots(a,b){
+    prepField();
+    const total=a/b;
+    const groupCount=Math.round(b);
+    const perGroup=Math.floor(a/groupCount);
+    const remainder=a-perGroup*groupCount;
+
+    const wrap=document.createElement('div');
+    wrap.className='grpwrap';
+    const groups=[];
+    for(let g=0; g<groupCount; g++){
+      const grp=document.createElement('div');
+      grp.className='grp';
+      grp.style.minWidth='34px'; grp.style.minHeight='34px';
+      grp.style.flexWrap='wrap'; grp.style.maxWidth='86px';
+      wrap.appendChild(grp); groups.push(grp);
+    }
+    framesEl.appendChild(wrap);
+    hintEl.textContent=fmt(a)+' ÷ '+fmt(b)+' = ?';
+
+    const evenly=perGroup*groupCount;
+    let dealt=0, leftover=null;
+    function step(){
+      if(dealt>=a){
+        const hint = remainder>0 ? 'je '+perGroup+', Rest '+remainder
+                                 : 'auf '+groupCount+' verteilt → je '+fmt(total);
+        after(T.step, ()=>endCalc(total, hint));
+        return;
+      }
+      let grp;
+      if(dealt<evenly){ grp=groups[dealt%groupCount]; }
+      else{
+        if(!leftover){
+          leftover=document.createElement('div');
+          leftover.className='grp';
+          leftover.style.borderColor='var(--accent)';
+          leftover.style.borderStyle='dashed';
+          wrap.appendChild(leftover);
+        }
+        grp=leftover;
+      }
+      const dot=document.createElement('div');
+      dot.className='gdot deal';
+      if(dealt>=evenly) dot.style.background='var(--accent)';
+      dot.style.transform='scale(0)';
+      dot.style.transition='transform .55s cubic-bezier(.34,1.4,.64,1)';
+      grp.appendChild(dot);
+      grp.classList.add('jiggle');
+      requestAnimationFrame(()=>{ dot.style.transform='scale(1)'; });
+      after(T.settle, ()=>grp.classList.remove('jiggle'));
+      dealt++;
+      after(T.step, step);
+    }
+    after(T.pause, step);
+  }
+
+  // ================= DIVISION (pie) =================
+  // share `a` whole pies among `b` people; each gets a/b of a pie.
+  function showDivisionPie(a,b){
+    prepField();
+    const total=a/b;
+    const slices=Math.round(b);
+    const pies=Math.round(a);
+    const palette=['#e3000f','#111111','#1f6feb','#1a8f3c','#d98a00','#7d3cc9','#0d9488','#c2185b'];
+
+    const wrapper=document.createElement('div');
+    wrapper.style.display='flex';
+    wrapper.style.flexDirection='column';
+    wrapper.style.alignItems='center';
+    const piesEl=document.createElement('div');
+    piesEl.className='pies';
+    wrapper.appendChild(piesEl);
+
+    const R=50, C=54; // radius and centre within a 108 viewBox
+    const sectorPath=(i)=>{
+      const a0=(i/slices)*2*Math.PI - Math.PI/2;
+      const a1=((i+1)/slices)*2*Math.PI - Math.PI/2;
+      const x0=C+R*Math.cos(a0), y0=C+R*Math.sin(a0);
+      const x1=C+R*Math.cos(a1), y1=C+R*Math.sin(a1);
+      const large=(a1-a0)>Math.PI?1:0;
+      if(slices===1){
+        // full circle as two arcs
+        return `M ${C} ${C-R} A ${R} ${R} 0 1 1 ${C-0.01} ${C-R} Z`;
+      }
+      return `M ${C} ${C} L ${x0.toFixed(2)} ${y0.toFixed(2)} `+
+             `A ${R} ${R} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+    };
+
+    const allSectors=[];
+    for(let p=0;p<pies;p++){
+      const pie=document.createElement('div');
+      pie.className='pie';
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox','0 0 108 108');
+      svg.setAttribute('width','104'); svg.setAttribute('height','104');
+      for(let s=0;s<slices;s++){
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('class','sector');
+        path.setAttribute('d',sectorPath(s));
+        svg.appendChild(path);
+        allSectors.push(path);
+      }
+      pie.appendChild(svg);
+      piesEl.appendChild(pie);
+    }
+
+    const label=document.createElement('div');
+    label.className='pielabel';
+    wrapper.appendChild(label);
+
+    // legend: one colour per person
+    const legend=document.createElement('div');
+    legend.className='pielegend';
+    for(let s=0;s<slices;s++){
+      const item=document.createElement('div'); item.className='pilleg';
+      const sw=document.createElement('div'); sw.className='sw';
+      sw.style.background=palette[s%palette.length];
+      item.appendChild(sw);
+      item.appendChild(document.createTextNode('Person '+(s+1)));
+      legend.appendChild(item);
+    }
+    wrapper.appendChild(legend);
+    framesEl.appendChild(wrapper);
+
+    hintEl.textContent=fmt(a)+' ÷ '+fmt(b)+' in '+slices+' Stücke';
+
+    let i=0;
+    function step(){
+      if(i>=allSectors.length){
+        const per=fmt(total);
+        const txt = total<1 ? 'jeder bekommt '+per+' Stück'
+                            : 'jeder bekommt '+per+(total===1?' Stück':' Stücke');
+        after(T.step, ()=>endCalc(total, txt));
+        return;
+      }
+      const owner=i%slices;
+      allSectors[i].style.fill=palette[owner%palette.length];
+      label.textContent='Person '+(owner+1)+' bekommt ein Stück';
+      i++;
+      after(T.step, step);
+    }
+    after(T.pause, step);
+  }
+
+  // ================= classification & dispatch =================
+  function divModes(a,b){
+    const modes=[];
+    const pieOK  = Number.isInteger(a)&&Number.isInteger(b)&&b>=2&&b<=8&&a>=1&&a<=6;
+    // dots only make sense when each share gets at least one whole dot (a>=b)
+    const dotsOK = Number.isInteger(a)&&Number.isInteger(b)&&b>=1&&b<=10&&a>=b&&a<=50;
+    if(pieOK)  modes.push('pie');
+    if(dotsOK) modes.push('dots');
+    return modes;
+  }
+
+  function viewCountFor(a,op,b){
+    if(op==='×'){ return (a!==b && Number.isInteger(a)&&Number.isInteger(b)&&a>0&&b>0&&a*b<=40&&Math.max(a,b)<=10)?2:1; }
+    if(op==='÷'){ return Math.max(1, divModes(a,b).length); }
+    return 1;
+  }
+
+  function runCalc(){
+    if(!lastCalc) return;
+    animating=true;
+    field.classList.remove('tappable');
+    const {a,op,b,total}=lastCalc;
+
+    if(op==='+'){ showAddition(a,b); return; }
+
+    if(op==='−'){ showSubtraction(a,b); return; }
+
+    if(op==='×'){
+      const canVisual = Number.isInteger(a)&&Number.isInteger(b)&&a>=0&&b>=0&&a*b<=40&&Math.max(a,b)<=10;
+      if(canVisual) showMultiplication(a,b, viewIndex%2);
+      else showMultiplication(a,b,0); // showMultiplication itself routes big/decimal to explain()
+      return;
+    }
+
+    if(op==='÷'){
+      if(b===0){
+        explain(NaN, fmt(a)+' ÷ <b>0</b>',
+          'Durch null teilen geht nicht – man kann nichts auf null Personen verteilen.');
+        return;
+      }
+      const modes=divModes(a,b);
+      if(modes.length===0){
+        explain(total, fmt(a)+' ÷ '+fmt(b)+' = <b>'+fmt(total)+'</b>',
+          'Wir teilen '+fmt(a)+' gerecht in '+fmt(b)+' Teile.');
+        return;
+      }
+      const mode=modes[viewIndex % modes.length];
+      if(mode==='pie') showDivisionPie(a,b); else showDivisionDots(a,b);
+      return;
+    }
+    explain(total, fmt(total), 'Ergebnis');
+  }
+
+  // ================= equals =================
+  function equals(){
+    if(expr==="") return;
+    if(animating) return;
+    let clean=expr.replace(/[+\−×÷]$/,'');
+    const m=clean.match(/^(\d+(?:[.,]\d+)?)\s*([+\−×÷])\s*(\d+(?:[.,]\d+)?)$/);
+
+    let jsExpr=clean.replace(/,/g,'.');
+    for(const k in OPS) jsExpr=jsExpr.split(k).join(OPS[k]);
+    let total;
+    try{ total=Function('"use strict";return ('+jsExpr+')')(); }
+    catch(e){ return; }
+    if(typeof total!=='number'||!isFinite(total)){
+      // e.g. division by zero typed as a raw expression
+      if(m && m[2]==='÷' && parseFloat(m[3].replace(',','.'))===0){
+        render(); justEvaluated=true;
+        lastCalc={a:parseFloat(m[1].replace(',','.')),op:'÷',b:0,total:NaN};
+        viewIndex=0; runCalc();
+      }
+      return;
+    }
+    total=Math.round(total*1000)/1000;
+
+    render();
+    justEvaluated=true;
+
+    if(m){
+      const a=parseFloat(m[1].replace(',','.'));
+      const op=m[2];
+      const b=parseFloat(m[3].replace(',','.'));
+      lastCalc={a,op,b,total};
+      viewIndex=0;
+      runCalc();
+      return;
+    }
+    // chained / complex input
+    lastCalc={a:null,op:null,b:null,total};
+    explain(total, fmt(total), 'Das Ergebnis deiner Rechnung.');
+  }
+
+  // ================= input wiring =================
+  document.querySelector('.pad').addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.num!==undefined) press(b.dataset.num);
+    else if(b.dataset.op!==undefined) press(b.dataset.op);
+    else if(b.dataset.act==='clear') clearAll();
+    else if(b.dataset.act==='back') back();
+    else if(b.dataset.act==='equals') equals();
+  });
+
+  field.addEventListener('click', ()=>{
+    if(animating || !lastCalc) return;
+    if(resultEl.classList.contains('hidden')) return;
+    viewIndex++;
+    resultEl.classList.add('hidden');
+    runCalc();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

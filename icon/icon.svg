@@ -28,9 +28,9 @@
   <!-- numbers: 7 + 9 -->
   <g font-family="Liberation Sans, Helvetica, Arial, sans-serif" font-weight="bold"
      text-anchor="middle" dominant-baseline="alphabetic">
-    <text x="280" y="700" font-size="520" fill="url(#redgloss)">6</text>
-    <text x="512" y="678" font-size="360" fill="url(#darkgloss)">+</text>
-    <text x="752" y="700" font-size="520" fill="url(#redgloss)">7</text>
+    <text x="240" y="700" font-size="520" fill="url(#redgloss)">6</text>
+    <text x="512" y="678" font-size="330" fill="url(#darkgloss)">+</text>
+    <text x="784" y="700" font-size="520" fill="url(#redgloss)">7</text>
   </g>
 
   <!-- glossy sheen across the top, with a gentle curved lower edge -->

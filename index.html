@@ -826,7 +826,9 @@
       wrap.appendChild(grp);
       grp.classList.add('jiggle');
       running+=perGroup;
-      hintEl.textContent=(g+1)+' × '+perGroup+' = '+running;
+      // show the running total while counting, but don't spell out the final
+      // answer below the dots before it's revealed at the top
+      hintEl.textContent=(g+1)+' × '+perGroup+' = '+(g+1<groupCount ? running : '?');
       after(T.step+450, ()=>{
         grp.classList.remove('jiggle');
         grp.classList.add('done');

@@ -61,6 +61,7 @@
     font-weight:700;
     letter-spacing:-0.5px;
     text-transform:uppercase;
+    cursor:pointer;
   }
   header .dot{
     width:13px;height:13px;border-radius:50%;
@@ -366,13 +367,16 @@
   button.key.op.big:active{background:#e8e0d2;}
   button.key.op.big.minus{grid-area:minus;}
   button.key.op.big.plus{grid-area:plus;}
+  /* × and ÷ stay hidden until the "Zehnerfreund" title is tapped;
+     visibility (not display) keeps the keypad grid cells in place */
+  button.key.locked{visibility:hidden;}
 </style>
 </head>
 <body>
 <div class="app">
   <header>
     <div>
-      <span class="title">Zehnerfreund<span class="dot"></span></span>
+      <span class="title" id="brand">Zehnerfreund<span class="dot"></span></span>
     </div>
     <span class="sub"></span>
   </header>
@@ -391,8 +395,8 @@
   <div class="pad">
     <button class="key act" data-act="clear" style="grid-area:clr">C</button>
     <button class="key act" data-act="back" style="grid-area:bsp">⌫</button>
-    <button class="key op" data-op="×" style="grid-area:mul">×</button>
-    <button class="key op" data-op="÷" style="grid-area:div">÷</button>
+    <button class="key op locked" data-op="×" style="grid-area:mul">×</button>
+    <button class="key op locked" data-op="÷" style="grid-area:div">÷</button>
 
     <button class="key" data-num="7" style="grid-area:n7">7</button>
     <button class="key" data-num="8" style="grid-area:n8">8</button>
@@ -1147,6 +1151,15 @@
     resultEl.classList.add('hidden');
     runCalc();
   });
+
+  // Tapping the "Zehnerfreund" title reveals (or hides again) the × and ÷ keys.
+  const brand = document.getElementById('brand');
+  if(brand){
+    brand.addEventListener('click', ()=>{
+      document.querySelectorAll('.key.op[data-op="×"], .key.op[data-op="÷"]')
+        .forEach(b=>b.classList.toggle('locked'));
+    });
+  }
 
   render();
 })();

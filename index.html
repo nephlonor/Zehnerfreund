@@ -362,8 +362,8 @@
     flex:1;
     min-height:0;
     flex-direction:column;
-    padding:8px clamp(10px,4vw,20px) 12px;
-    gap:10px;
+    padding:6px clamp(8px,3.5vw,18px) 8px;
+    gap:clamp(4px,1vh,8px);
     overflow:hidden;
   }
   .trow{
@@ -372,21 +372,21 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:clamp(8px,3vw,20px);
+    gap:clamp(6px,2.5vw,18px);
     background:var(--paper);
     border:2px solid var(--ink);
-    padding:clamp(8px,2.5vw,16px);
+    padding:clamp(4px,1.4vw,12px);
   }
   .tframe{
     display:grid;
     grid-template-columns:repeat(5,1fr);
     grid-template-rows:repeat(2,1fr);
-    gap:clamp(4px,1.4vw,8px);
+    gap:clamp(3px,1vw,7px);
     flex:0 0 auto;
   }
   .tcell{
-    width:clamp(16px,5.2vw,30px);
-    height:clamp(16px,5.2vw,30px);
+    width:clamp(13px,4.4vw,26px);
+    height:clamp(13px,4.4vw,26px);
     border-radius:50%;
     border:2px solid var(--ink);
     background:transparent;
@@ -399,13 +399,13 @@
   @keyframes tpulse{0%,100%{transform:scale(1);}50%{transform:scale(1.32);}}
   .tcalc{
     flex:0 0 auto;
-    min-width:clamp(58px,17vw,92px);
+    min-width:clamp(52px,15vw,84px);
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:2px;
-    font-size:clamp(20px,6.4vw,32px);
+    gap:1px;
+    font-size:clamp(17px,5.2vw,26px);
     font-weight:700;
     letter-spacing:-1px;
     line-height:1;
@@ -513,6 +513,10 @@
   <div class="test" id="test">
     <div class="trow" data-row="0"></div>
     <div class="trow" data-row="1"></div>
+    <div class="trow" data-row="2"></div>
+    <div class="trow" data-row="3"></div>
+    <div class="trow" data-row="4"></div>
+    <div class="trow" data-row="5"></div>
   </div>
 </div>
 
@@ -1276,10 +1280,23 @@
   function afterT(ms, fn){ const id=setTimeout(fn, ms); testTimers.push(id); return id; }
   function clearTestTimers(){ testTimers.forEach(clearTimeout); testTimers=[]; }
 
+  // a random a+b with 7 <= a+b <= 20; both a and b in 2..10 so either order
+  // (e.g. 5+7 and 7+5) can occur
   function randCalc(){
-    const a = 2 + Math.floor(Math.random()*8);   // 2..9
-    const b = 2 + Math.floor(Math.random()*8);   // 2..9
+    let a, b;
+    do{
+      a = 2 + Math.floor(Math.random()*9);   // 2..10
+      b = 2 + Math.floor(Math.random()*9);   // 2..10
+    }while(a+b < 7 || a+b > 20);
     return {a, b};
+  }
+  // build n calculations, guaranteeing both orders appear (some a<b and some a>b)
+  function makeCalcs(n){
+    let calcs;
+    do{
+      calcs = Array.from({length:n}, randCalc);
+    }while(!(calcs.some(c=>c.a<c.b) && calcs.some(c=>c.a>c.b)));
+    return calcs;
   }
 
   // build one row's DOM: [left frame] [calc] [right frame]; 10 cells per frame
@@ -1301,8 +1318,9 @@
 
   function resetTest(){
     clearTestTimers();
-    testState = rowEls.map(rowEl=>{
-      const {a,b}=randCalc();
+    const calcs = makeCalcs(rowEls.length);
+    testState = rowEls.map((rowEl, i)=>{
+      const {a,b}=calcs[i];
       const dom=buildRow(rowEl, a, b);
       return {a, b, total:a+b, count:0, done:false, dom};
     });

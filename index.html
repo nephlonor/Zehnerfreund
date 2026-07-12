@@ -57,7 +57,28 @@
     border-bottom:2px solid var(--ink);
     margin:0 0 0;
     background:var(--paper);
+    position:relative;
   }
+  .testbtn{
+    position:absolute;
+    left:clamp(16px,5vw,26px);
+    top:50%;
+    transform:translateY(-50%);
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    font-family:inherit;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    padding:6px 11px;
+    cursor:pointer;
+    transition:background .12s;
+  }
+  .testbtn:active{background:#333;}
+  .testbtn.on{background:var(--accent);}
   header .title{
     font-size:clamp(16px,4.6vw,20px);
     font-weight:700;
@@ -329,6 +350,73 @@
   /* the visual field is tappable once a result is shown */
   .field.tappable{cursor:pointer;}
 
+  /* ---------- TEST MODE ---------- */
+  /* toggling into test mode hides the calculator and shows the puzzles */
+  .app.mode-test .display,
+  .app.mode-test .field,
+  .app.mode-test .pad{display:none;}
+  .test{display:none;}
+  .app.mode-test .test{display:flex;}
+
+  .test{
+    flex:1;
+    min-height:0;
+    flex-direction:column;
+    padding:8px clamp(10px,4vw,20px) 12px;
+    gap:10px;
+    overflow:hidden;
+  }
+  .trow{
+    flex:1;
+    min-height:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:clamp(8px,3vw,20px);
+    background:var(--paper);
+    border:2px solid var(--ink);
+    padding:clamp(8px,2.5vw,16px);
+  }
+  .tframe{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    grid-template-rows:repeat(2,1fr);
+    gap:clamp(4px,1.4vw,8px);
+    flex:0 0 auto;
+  }
+  .tcell{
+    width:clamp(16px,5.2vw,30px);
+    height:clamp(16px,5.2vw,30px);
+    border-radius:50%;
+    border:2px solid var(--ink);
+    background:transparent;
+    cursor:pointer;
+    transition:background .25s ease, border-color .25s ease, transform .2s ease;
+  }
+  .tcell.fill.c1{background:var(--ink);border-color:var(--ink);}
+  .tcell.fill.c2{background:var(--accent);border-color:var(--accent);}
+  .tcell.pulse{animation:tpulse .7s ease-in-out infinite;}
+  @keyframes tpulse{0%,100%{transform:scale(1);}50%{transform:scale(1.32);}}
+  .tcalc{
+    flex:0 0 auto;
+    min-width:clamp(58px,17vw,92px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    font-size:clamp(20px,6.4vw,32px);
+    font-weight:700;
+    letter-spacing:-1px;
+    line-height:1;
+  }
+  .tcalc .ans{
+    color:var(--accent);
+    opacity:0;
+    transition:opacity .45s ease;
+  }
+  .tcalc .ans.show{opacity:1;}
+
   /* ---------- KEYPAD ---------- */
   .pad{
     display:grid;
@@ -378,6 +466,7 @@
 <body>
 <div class="app">
   <header>
+    <button class="testbtn" id="testBtn">test</button>
     <div>
       <span class="title" id="brand">Zehnerfreund<span class="dot"></span></span>
     </div>
@@ -418,6 +507,12 @@
     <button class="key" data-num="0" style="grid-area:n0">0</button>
     <button class="key" data-num="." style="grid-area:dot">,</button>
     <button class="key eq" data-act="equals" style="grid-area:eq">=</button>
+  </div>
+
+  <!-- TEST MODE: tap the dots to match each calculation -->
+  <div class="test" id="test">
+    <div class="trow" data-row="0"></div>
+    <div class="trow" data-row="1"></div>
   </div>
 </div>
 
@@ -1165,6 +1260,86 @@
         .forEach(b=>b.classList.toggle('locked'));
     });
   }
+
+  // ================= TEST MODE =================
+  // Two stacked puzzles. Each has a left and right ten-frame flanking a
+  // calculation. Tapping fills the next dot: the first number's dots are one
+  // colour, the second number's continue in another, spilling from the left
+  // frame into the right. When a puzzle's dots are all filled they pulse and
+  // the answer appears after 3s. Once both are done the page resets after 5s.
+  const app     = document.querySelector('.app');
+  const testBtn = document.getElementById('testBtn');
+  const testEl  = document.getElementById('test');
+  const rowEls  = [...testEl.querySelectorAll('.trow')];
+  let testState = [];
+  let testTimers = [];
+  function afterT(ms, fn){ const id=setTimeout(fn, ms); testTimers.push(id); return id; }
+  function clearTestTimers(){ testTimers.forEach(clearTimeout); testTimers=[]; }
+
+  function randCalc(){
+    const a = 2 + Math.floor(Math.random()*8);   // 2..9
+    const b = 2 + Math.floor(Math.random()*8);   // 2..9
+    return {a, b};
+  }
+
+  // build one row's DOM: [left frame] [calc] [right frame]; 10 cells per frame
+  function buildRow(rowEl, a, b){
+    rowEl.innerHTML='';
+    const left =document.createElement('div'); left.className='tframe';
+    const mid  =document.createElement('div'); mid.className='tcalc';
+    const q    =document.createElement('div'); q.className='q'; q.textContent=a+'+'+b;
+    const ans  =document.createElement('div'); ans.className='ans'; ans.textContent='='+(a+b);
+    mid.appendChild(q); mid.appendChild(ans);
+    const right=document.createElement('div'); right.className='tframe';
+    const cells=[];
+    [left,right].forEach(fr=>{
+      for(let i=0;i<10;i++){ const c=document.createElement('div'); c.className='tcell'; fr.appendChild(c); cells.push(c); }
+    });
+    rowEl.appendChild(left); rowEl.appendChild(mid); rowEl.appendChild(right);
+    return {q, ans, cells};
+  }
+
+  function resetTest(){
+    clearTestTimers();
+    testState = rowEls.map(rowEl=>{
+      const {a,b}=randCalc();
+      const dom=buildRow(rowEl, a, b);
+      return {a, b, total:a+b, count:0, done:false, dom};
+    });
+  }
+
+  function completeRow(idx){
+    const st=testState[idx];
+    st.done=true;
+    // pulse the filled dots
+    for(let i=0;i<st.total;i++) st.dom.cells[i].classList.add('pulse');
+    // after 3s: stop pulsing and reveal the answer
+    afterT(3000, ()=>{
+      st.dom.cells.forEach(c=>c.classList.remove('pulse'));
+      st.dom.ans.classList.add('show');
+    });
+    // once every row is done, reset the whole page after 5s
+    if(testState.every(s=>s && s.done)){
+      afterT(5000, resetTest);
+    }
+  }
+
+  testEl.addEventListener('click', e=>{
+    const rowEl=e.target.closest('.trow'); if(!rowEl) return;
+    const idx=+rowEl.dataset.row;
+    const st=testState[idx]; if(!st || st.done) return;
+    const i=st.count;
+    st.dom.cells[i].classList.add('fill', i<st.a ? 'c1' : 'c2');
+    st.count++;
+    if(st.count>=st.total) completeRow(idx);
+  });
+
+  testBtn.addEventListener('click', ()=>{
+    const on=app.classList.toggle('mode-test');
+    testBtn.classList.toggle('on', on);
+    if(on){ softReset(); clearAll(); resetTest(); }
+    else  { clearTestTimers(); }
+  });
 
   render();
 })();

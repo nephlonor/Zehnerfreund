@@ -621,15 +621,6 @@
     gap:10px;
   }
   .hbig b{font-weight:700;}
-  .hbig .hcount{font-size:15px;letter-spacing:0;color:var(--muted);font-weight:400;}
-  .harrow{
-    width:1em;height:1em;
-    fill:none;
-    stroke:var(--accent);
-    stroke-width:2.6;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-  }
   .hhint{font-size:14px;color:var(--accent);min-height:1.3em;line-height:1.3;font-weight:600;}
   .hprog{
     flex:none;
@@ -683,46 +674,16 @@
     -webkit-user-select:none;
     transition:background .25s ease, color .25s ease, border-color .25s ease;
   }
-  .hcell.t{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700;}
   .hcell.ok{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;z-index:1;animation:hpop .45s ease;}
-  .hcell.near{background:rgba(227,0,15,.16);border-color:var(--accent);}
-  .hcell.near2{background:rgba(227,0,15,.07);border-color:rgba(227,0,15,.5);}
   .hcell.row{background:#f4efe6;border-color:#d9cfbd;}
   .hcell.miss{border:2px dashed var(--accent);color:var(--accent);}
   .hcell.wrong{animation:hshake .45s ease;border-color:var(--accent);}
   .hcell.pulse{z-index:2;animation:hpulse 1s ease-in-out infinite;border-color:var(--accent);}
-  /* "Ohne Zahlen": numbers stay invisible until tapped (anchors and answers excepted) */
-  .hgrid.blind .hcell:not(.t):not(.ok):not(.show):not(.miss){color:transparent;}
+  /* "Ohne Zahlen": numbers stay invisible until tapped (references and answers excepted) */
+  .hgrid.blind .hcell:not(.ok):not(.show):not(.miss){color:transparent;}
   @keyframes hpop{0%{transform:scale(1);}40%{transform:scale(1.28);}100%{transform:scale(1);}}
   @keyframes hshake{0%,100%{transform:translateX(0);}20%{transform:translateX(-4px);}40%{transform:translateX(4px);}60%{transform:translateX(-3px);}80%{transform:translateX(3px);}}
   @keyframes hpulse{0%,100%{box-shadow:0 0 0 0 rgba(227,0,15,0);}50%{box-shadow:0 0 0 4px rgba(227,0,15,.6);}}
-
-  /* explorer: the selected number with its eight neighbours */
-  .hmini{
-    display:none;
-    flex:none;
-    grid-template-columns:repeat(3,clamp(48px,14vw,64px));
-    grid-auto-rows:clamp(40px,6vh,52px);
-    gap:4px;
-    justify-content:center;
-    padding:0 0 12px;
-  }
-  .hm{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    background:var(--paper);
-    border:1.5px solid var(--grid);
-    border-radius:4px;
-    line-height:1.05;
-  }
-  .hm .v{font-size:clamp(16px,4.6vw,20px);font-weight:600;}
-  .hm .o{font-size:11px;color:var(--accent);font-weight:600;}
-  .hm.c{background:var(--ink);border-color:var(--ink);color:#fff;}
-  .hm.n1{background:rgba(227,0,15,.16);border-color:var(--accent);}
-  .hm.n2{background:rgba(227,0,15,.07);border-color:rgba(227,0,15,.5);}
-  .hm.off{background:transparent;border-style:dashed;}
 
   /* "Ausschnitt": a 3x3 piece of the hundred board to complete */
   .hsnip{
@@ -760,8 +721,7 @@
   }
   #hunderter[data-ex="ausschnitt"] .hgrid{display:none;}
   #hunderter[data-ex="ausschnitt"] .hsnip,
-  #hunderter[data-ex="ausschnitt"] .hpad,
-  #hunderter[data-ex="entdecken"] .hmini{display:grid;}
+  #hunderter[data-ex="ausschnitt"] .hpad{display:grid;}
 
   /* end of a round */
   .hdone{
@@ -867,7 +827,7 @@
 </div>
 
 <!-- HUNDERTER: the numbers 1 to 100 in the hundred board, with exercises -->
-<div class="hscreen" id="hunderter" data-ex="entdecken">
+<div class="hscreen" id="hunderter" data-ex="finden">
   <header>
     <div>
       <span class="title">Hunderter<span class="dot"></span></span>
@@ -891,7 +851,6 @@
       <button id="hAgain">Nochmal</button>
     </div>
   </div>
-  <div class="hmini" id="hMini"></div>
   <div class="hpad" id="hPad">
     <button class="key" data-k="1">1</button>
     <button class="key" data-k="2">2</button>
@@ -1803,7 +1762,6 @@
   const progEl  = document.getElementById('hProg');
   const gridEl  = document.getElementById('hGrid');
   const snipEl  = document.getElementById('hSnip');
-  const miniEl  = document.getElementById('hMini');
   const padEl   = document.getElementById('hPad');
   const doneEl  = document.getElementById('hDone');
 
@@ -1812,42 +1770,20 @@
   const at=(r,c)=>(r<0||r>9||c<0||c>9) ? null : r*10+c+1;
   const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
   const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
-
-  // the eight neighbour directions
-  const DIRS={
-    l: {dr:0, dc:-1, txt:'links neben',      name:'links',        angle:180},
-    r: {dr:0, dc:1,  txt:'rechts neben',     name:'rechts',       angle:0},
-    u: {dr:-1,dc:0,  txt:'über',             name:'oben',         angle:270},
-    d: {dr:1, dc:0,  txt:'unter',            name:'unten',        angle:90},
-    ul:{dr:-1,dc:-1, txt:'oben links von',   name:'oben links',   angle:225},
-    ur:{dr:-1,dc:1,  txt:'oben rechts von',  name:'oben rechts',  angle:315},
-    dl:{dr:1, dc:-1, txt:'unten links von',  name:'unten links',  angle:135},
-    dr:{dr:1, dc:1,  txt:'unten rechts von', name:'unten rechts', angle:45},
-  };
-  const ORTH=['l','r','u','d'], DIAG=['ul','ur','dl','dr'], ALL=[...ORTH,...DIAG];
-  const step=k=>DIRS[k].dr*10+DIRS[k].dc;                       // e.g. unten = +10
   const signed=v=>(v>0?'+ ':'− ')+Math.abs(v);
-  const nb=(n,k)=>{ const p=pos(n); return at(p.r+DIRS[k].dr, p.c+DIRS[k].dc); };
-  const arrow=k=>'<svg class="harrow" viewBox="0 0 24 24" style="transform:rotate('+DIRS[k].angle+'deg)"><path d="M4 12h15M13 6l6 6-6 6"/></svg>';
 
   const EX={
-    entdecken: {label:'Entdecken'},
     finden:    {label:'Finden', tasks:10},
-    nachbar:   {label:'Nachbar', tasks:10,
-                levels:[['lr','← →'],['ud','↑ ↓'],['diag','Diagonal'],['mix','Gemischt']]},
-    alle:      {label:'Alle Nachbarn', tasks:6,
-                levels:[['4','4 Nachbarn'],['8','8 Nachbarn']]},
     ausschnitt:{label:'Ausschnitt', tasks:5,
                 levels:[['kreuz','Kreuz'],['quadrat','Quadrat']]},
     blind:     {label:'Ohne Zahlen', tasks:10,
                 levels:[['zehner','Mit Zehnern'],['leer','Ganz leer']]},
   };
-  let ex='entdecken';
+  let ex='finden';
   const level={};
   Object.keys(EX).forEach(k=>{ if(EX[k].levels) level[k]=EX[k].levels[0][0]; });
 
   let round=null;     // {i, total, stars, used, firstTry, wrong, lock, task}
-  let selected=null;  // explorer selection
   let timers=[];
   function after(ms, fn){ const id=setTimeout(fn,ms); timers.push(id); return id; }
   function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
@@ -1926,12 +1862,10 @@
   function startRound(){
     clearTimers();
     doneEl.hidden=true;
-    selected=null;
     hEl.dataset.ex=ex;
     gridEl.classList.toggle('blind', ex==='blind' || ex==='finden');
     renderTabs();
-    if(ex==='entdecken'){ round=null; renderProg(); explore(null); return; }
-    round={i:0, total:EX[ex].tasks, stars:[], used:new Set(), lastDir:null};
+    round={i:0, total:EX[ex].tasks, stars:[], used:new Set()};
     nextTask();
   }
   function nextTask(){
@@ -1978,36 +1912,6 @@
     return 'Die '+n+' steht in der Reihe von '+s+' bis '+(s+9)+'.';
   }
 
-  // ---------- explorer ----------
-  function explore(n){
-    selected=n;
-    clearMarks();
-    miniEl.innerHTML='';
-    const mini=(cls, v, o)=>{
-      const d=document.createElement('div');
-      d.className='hm '+cls;
-      d.innerHTML=(v!=null ? '<span class="v">'+v+'</span>' : '')+(o ? '<span class="o">'+o+'</span>' : '');
-      miniEl.appendChild(d);
-    };
-    const layout=[['ul','u','ur'],['l',null,'r'],['dl','d','dr']];
-    if(n==null){
-      prompt('Tippe auf eine Zahl', '', '');
-      layout.flat().forEach(()=>mini('off'));
-      return;
-    }
-    cells[n].classList.add('t');
-    ALL.forEach(k=>{ const m=nb(n,k); if(m) cells[m].classList.add(ORTH.includes(k) ? 'near' : 'near2'); });
-    const tens=Math.floor(n/10), ones=n%10;
-    prompt('Die Nachbarn von', '<b>'+n+'</b>',
-      n===100 ? '10 Zehner' : tens+' Zehner und '+ones+' Einer');
-    layout.flat().forEach(k=>{
-      if(!k){ mini('c', n); return; }
-      const m=nb(n,k);
-      if(m) mini(ORTH.includes(k) ? 'n1' : 'n2', m, signed(step(k)));
-      else  mini('off');
-    });
-  }
-
   // ---------- exercises ----------
   const TASKS={
     // tap the asked number on the board; only ~20 reference numbers are shown,
@@ -2034,65 +1938,6 @@
         prompt('Finde die Zahl – ohne Zahlen', '<b>'+n+'</b>', '');
       },
       tap(m){ findTap(m, true); }
-    },
-
-    // tap the neighbour in one direction
-    nachbar:{
-      make(){
-        const set={lr:['l','r'], ud:['u','d'], diag:DIAG, mix:ALL}[level.nachbar];
-        let k;
-        do{ k=pick(set); }while(set.length>1 && k===round.lastDir);
-        round.lastDir=k;
-        const n=pickNum(m=>nb(m,k)!=null);
-        round.task={n, k, ans:nb(n,k)};
-        cells[n].classList.add('t');
-        prompt('Welche Zahl steht '+DIRS[k].txt+' '+n+'?', '<b>'+n+'</b>'+arrow(k), '');
-      },
-      tap(m){
-        const t=round.task;
-        if(m===t.n) return;
-        if(m===t.ans){ cells[m].classList.add('ok'); taskDone(); return; }
-        miss();
-        flash(cells[m], 'wrong');
-        hintEl.textContent='Tipp: '+DIRS[t.k].name+' heisst '+signed(step(t.k))+'.';
-        if(round.wrong>=2) cells[t.ans].classList.add('pulse');
-      }
-    },
-
-    // tap every neighbour of a number
-    alle:{
-      make(){
-        const dirs=level.alle==='4' ? ORTH : ALL;
-        const n=pickNum(()=>true);
-        const targets=new Set(dirs.map(k=>nb(n,k)).filter(m=>m!=null));
-        round.task={n, targets, found:new Set()};
-        cells[n].classList.add('t');
-        this.show();
-      },
-      show(){
-        const t=round.task, left=t.targets.size-t.found.size;
-        prompt('Tippe alle Nachbarn von '+t.n,
-          '<b>'+t.n+'</b><span class="hcount">'+(left ? 'noch '+left : 'alle gefunden')+'</span>',
-          hintEl.textContent);
-      },
-      tap(m){
-        const t=round.task;
-        if(m===t.n || t.found.has(m)) return;
-        if(t.targets.has(m)){
-          t.found.add(m);
-          cells[m].classList.remove('pulse');
-          cells[m].classList.add('ok');
-          this.show();
-          if(t.found.size===t.targets.size) taskDone();
-          return;
-        }
-        miss();
-        flash(cells[m], 'wrong');
-        hintEl.textContent = level.alle==='4'
-          ? 'Tipp: oben, unten, links und rechts.'
-          : 'Tipp: oben, unten, links, rechts und die 4 schrägen Felder.';
-        if(round.wrong>=3) t.targets.forEach(x=>{ if(!t.found.has(x)) cells[x].classList.add('pulse'); });
-      }
     },
 
     // complete a 3x3 piece of the board
@@ -2190,7 +2035,6 @@
   gridEl.addEventListener('click', e=>{
     const el=e.target.closest('.hcell'); if(!el) return;
     const n=+el.dataset.n;
-    if(ex==='entdecken'){ explore(selected===n ? null : n); return; }
     if(!round || round.lock || !TASKS[ex].tap) return;
     TASKS[ex].tap(n);
   });

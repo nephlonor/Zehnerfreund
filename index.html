@@ -1928,7 +1928,7 @@
     doneEl.hidden=true;
     selected=null;
     hEl.dataset.ex=ex;
-    gridEl.classList.toggle('blind', ex==='blind');
+    gridEl.classList.toggle('blind', ex==='blind' || ex==='finden');
     renderTabs();
     if(ex==='entdecken'){ round=null; renderProg(); explore(null); return; }
     round={i:0, total:EX[ex].tasks, stars:[], used:new Set(), lastDir:null};
@@ -2010,14 +2010,20 @@
 
   // ---------- exercises ----------
   const TASKS={
-    // tap the asked number on the board
+    // tap the asked number on the board; only ~20 reference numbers are shown,
+    // two per row (one in each half) so they spread evenly over the board
     finden:{
       make(){
         const n=pickNum(()=>true);
         round.task={n};
+        for(let r=0;r<10;r++) for(const c0 of [0,5]){
+          let m;
+          do{ m=at(r, c0+rnd(0,4)); }while(m===n);
+          cells[m].classList.add('show');
+        }
         prompt('Finde die Zahl', '<b>'+n+'</b>', '');
       },
-      tap(m){ findTap(m, false); }
+      tap(m){ findTap(m, true); }
     },
 
     // the same, but the numbers are hidden

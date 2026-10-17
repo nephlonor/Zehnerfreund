@@ -1913,18 +1913,18 @@
   }
 
   // ---------- exercises ----------
+  // "Finden" shows 20 reference numbers, two per row (one in each half) so they
+  // spread evenly over the board; drawn once per app start, then always the same
+  const REFS=new Set();
+  for(let r=0;r<10;r++) for(const c0 of [0,5]) REFS.add(at(r, c0+rnd(0,4)));
+
   const TASKS={
-    // tap the asked number on the board; only ~20 reference numbers are shown,
-    // two per row (one in each half) so they spread evenly over the board
+    // tap the asked number on the board (never one of the references)
     finden:{
       make(){
-        const n=pickNum(()=>true);
+        const n=pickNum(m=>!REFS.has(m));
         round.task={n};
-        for(let r=0;r<10;r++) for(const c0 of [0,5]){
-          let m;
-          do{ m=at(r, c0+rnd(0,4)); }while(m===n);
-          cells[m].classList.add('show');
-        }
+        REFS.forEach(m=>cells[m].classList.add('show'));
         prompt('Finde die Zahl', '<b>'+n+'</b>', '');
       },
       tap(m){ findTap(m, true); }
